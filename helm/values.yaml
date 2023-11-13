@@ -1,0 +1,31 @@
+
+appName: password-generator
+appNamespace: password-generator
+replicaCount: 1
+ginMode: release
+
+resources:
+  # requests:
+  #   cpu: 10m
+  #   memory: 100Mi
+  # limits:
+  #   cpu: 1000m
+  #   memory: 
+
+securityContext:
+  # fsGroup: 2000
+  # runAsGroup: 3000
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+image:
+  # name: 
+  # tag: 
+
+service:
+  # protocol: TCP
+  # port: 80
+  # targetPort: 8080
+
+ingress:
+  # host: 

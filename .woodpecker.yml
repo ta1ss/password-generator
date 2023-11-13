@@ -1,0 +1,33 @@
+steps:
+  securitycheck:
+    group: build
+    when:
+      - branch: [master, ]
+    image: 
+    commands:
+      - 
+
+  go-test-step:
+    group: build
+    when:
+      - path: "src/backend/**"
+    image: 
+    settings:
+      dry_run: true
+      target: gotest
+      cache: "true"
+
+  build:
+    when:
+      - branch: [master, ]
+    image: 
+    settings:
+      repo: 
+      auto_tag: "true"
+      registry: 
+      cache: "true"
+      username:
+        from_secret: <woodpecker_username>
+      password:
+        from_secret: <woodpecker_secret>
+      mirror:
