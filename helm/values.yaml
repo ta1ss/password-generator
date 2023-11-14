@@ -5,27 +5,31 @@ replicaCount: 1
 ginMode: release
 
 resources:
-  # requests:
-  #   cpu: 10m
-  #   memory: 100Mi
-  # limits:
-  #   cpu: 1000m
-  #   memory: 
+  requests:
+    cpu: 10m
+    memory: 100Mi
+  limits:
+    cpu: 1000m
+    memory: 
 
 securityContext:
-  # fsGroup: 2000
-  # runAsGroup: 3000
-  # runAsNonRoot: true
-  # runAsUser: 1000
+  fsGroup: 20001
+  runAsGroup: 30001
+  runAsNonRoot: true
+  runAsUser: 10001
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  seccompProfile: |
+    { type: "RuntimeDefault" }
 
 image:
-  # name: 
-  # tag: 
+  name: 
+  tag: 
 
 service:
-  # protocol: TCP
-  # port: 80
-  # targetPort: 8080
+  protocol: TCP
+  port: 80
+  targetPort: 8080
 
 ingress:
-  # host: 
+  host: 
