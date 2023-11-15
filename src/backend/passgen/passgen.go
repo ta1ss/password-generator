@@ -37,30 +37,6 @@ var (
 	wordList []string
 )
 
-func newPasswordGenerator(filename string) (*PasswordGenerator, error) {
-	var err error
-	once.Do(func() {
-		wordList, err = loadWordsFromFile(filename)
-		if err != nil {
-			log.Fatalf("Error loading wordlist: %v", err)
-		}
-	})
-	generator := &PasswordGenerator{
-		wordlist: wordList,
-	}
-
-	return generator, nil
-}
-
-func loadWordsFromFile(filename string) ([]string, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		log.Printf("File %s not found.\n", filename)
-		return nil, err
-	}
-	return strings.Split(string(data), "\n"), nil
-}
-
 func getSymbol(pg *PasswordGenerator, symbols string) (string, error) {
 	// Handle the case where symbols is empty.
 	if symbols == "" {
@@ -176,10 +152,9 @@ func contains(slice []int, val int) bool {
 	return false
 }
 
-func GeneratePasswords(filename string, numPasswords int, values Values) ([]Password, error) {
-	pg, err := newPasswordGenerator(filename)
-	if err != nil {
-		log.Fatal(err)
+func GeneratePasswords(numPasswords int, values Values, wordList []string) ([]Password, error) {
+	pg := &PasswordGenerator{
+		wordlist: wordList,
 	}
 
 	var wg sync.WaitGroup

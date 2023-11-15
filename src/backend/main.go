@@ -32,6 +32,8 @@ var (
 		},
 		[]string{"path", "method"},
 	)
+	wordList []string
+	values   passgen.Values
 )
 
 func init() {
@@ -55,14 +57,23 @@ func setSecurityHeaders(c *gin.Context) {
 }
 
 func main() {
-
+	var err error
 	mode := os.Getenv("GIN_MODE")
 	if mode == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
 		gin.SetMode(gin.DebugMode)
 	}
-
+	values, err = loadValues()
+	if err != nil {
+		log.Fatal("Error loading values:", err)
+	}
+	once.Do(func() {
+		wordList, err = loadWordsFromFile(values.WORDLIST_PATH)
+		if err != nil {
+			log.Fatalf("Error loading wordlist: %v", err)
+		}
+	})
 	r := gin.New()
 	r.Use(PrometheusMiddleware)
 	r.Use(gin.Recovery())
@@ -101,8 +112,6 @@ func main() {
 }
 
 func loadValues() (passgen.Values, error) {
-	var values passgen.Values
-
 	yamlFile, err := os.ReadFile("values/values.yaml")
 	if err != nil {
 		return values, err
@@ -115,18 +124,22 @@ func loadValues() (passgen.Values, error) {
 
 	return values, nil
 }
+func loadWordsFromFile(filename string) ([]string, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		log.Printf("File %s not found.\n", filename)
+		return nil, err
+	}
+	return strings.Split(string(data), "\n"), nil
+}
 
 func jsonHandler(c *gin.Context) {
-	values, err := loadValues()
-	if err != nil {
-		log.Fatal("Error loading values:", err)
-	}
 	numPasswordsStr := c.Query("num")
 	numPasswords, err := strconv.Atoi(numPasswordsStr)
 	if err != nil || numPasswords < 1 || numPasswords > maxNumPasswords {
 		numPasswords = defaultNumPasswords
 	}
-	passwords, err := passgen.GeneratePasswords(values.WORDLIST_PATH, numPasswords, values)
+	passwords, err := passgen.GeneratePasswords(numPasswords, values, wordList)
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Error: %s", err.Error()))
 		return
