@@ -1,0 +1,20 @@
+---
+{{- if and .Values.wordlistConfigMap.enabled .Values.wordlistConfigMap.create }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.appName }}-wordlistconfigmap
+  namespace: {{ .Values.appNamespace }}
+data:
+  {{- toYaml .Values.wordlistConfigMap.data | nindent 2 }}
+{{- end }}
+---
+{{- if .Values.valuesConfigMap.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.appName }}-valuesconfigmap
+  namespace: {{ .Values.appNamespace }}
+data:
+  {{- toYaml .Values.valuesConfigMap.data | nindent 2 }}
+{{- end }}

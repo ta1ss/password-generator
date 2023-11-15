@@ -24,9 +24,22 @@ spec:
       imagePullSecrets:
         {{- toYaml .Values.imagePullSecrets | nindent 8 }}
       {{- end }}
+      {{- if or .Values.wordlistConfigMap.enabled .Values.valuesConfigMap.enabled }}
+      volumes:
+        {{- if .Values.wordlistConfigMap.enabled }}
+        - name: wordlist-volume
+          configMap:
+            name: {{ default (printf "%s-wordlistconfigmap" .Values.appName) .Values.wordlistConfigMap.nameOverride }}
+        {{- end }}
+        {{- if .Values.valuesConfigMap.enabled }}
+        - name: values-volume
+          configMap:
+            name: {{ .Values.appName }}-valuesconfigmap
+        {{- end }}
+      {{- end }}
       containers:
       - image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
         securityContext:
           allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
           runAsGroup: {{ .Values.securityContext.runAsGroup }}
@@ -58,6 +71,17 @@ spec:
         env:
         - name: GIN_MODE
           value: {{ .Values.ginMode }}
+        {{- if or .Values.wordlistConfigMap.enabled .Values.valuesConfigMap.enabled }}
+        volumeMounts:
+          {{- if .Values.wordlistConfigMap.enabled }}
+          - name: wordlist-volume
+            mountPath: {{ .Values.wordlistConfigMap.mountPath | default ("/app/wordlists") }}
+          {{- end }}
+          {{- if .Values.valuesConfigMap.enabled }}
+          - name: values-volume
+            mountPath: "/app/values"
+          {{- end }}
+        {{- end }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
