@@ -23,8 +23,14 @@ securityContext:
     { type: "RuntimeDefault" }
 
 image:
-  name: 
-  tag: 
+  name: ghcr.io/ta1ss/password-generator
+  tag: latest
+
+# Registry login creds are needed if using private registry
+# Secret can be set 
+# kubectl create secret docker-registry imagecredentials --docker-server=DOCKER_REGISTRY_SERVER --docker-username=DOCKER_USER --docker-password=DOCKER_PASSWORD
+imagePullSecrets:
+  - name: imagecredentials
 
 service:
   protocol: TCP
@@ -32,4 +38,4 @@ service:
   targetPort: 8080
 
 ingress:
-  host: 
+  host: password-generator.example.com
