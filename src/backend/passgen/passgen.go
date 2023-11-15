@@ -1,7 +1,9 @@
 package passgen
 
 import (
+	cryptorand "crypto/rand"
 	"log"
+	"math/big"
 	"math/rand"
 	"os"
 	"strings"
@@ -69,7 +71,8 @@ func (pg *PasswordGenerator) generator(values Values) (string, string) {
 	for totalLength < values.MIN_PASSWORD_LENGTH || totalLength > values.MAX_PASSWORD_LENGTH-2 {
 		totalLength = 0
 		for i := 0; i < 3; i++ {
-			passwordWords[i] = pg.wordlist[pg.randomizer.Intn(len(pg.wordlist))]
+			randomIndex, _ := cryptorand.Int(cryptorand.Reader, big.NewInt(int64((len(pg.wordlist)))))
+			passwordWords[i] = pg.wordlist[randomIndex.Int64()]
 			totalLength += len(passwordWords[i])
 		}
 	}
