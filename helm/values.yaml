@@ -72,3 +72,20 @@ service:
 
 ingress:
   host: password-generator.example.com
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  # tlsEnabled: true
+  # tlsSecret: my-tls-secret
+  # specOverride:
+  #   ingressClassName: internal-nginx
+  #   rules:
+  #     - host: password-generator.example.com
+  #       http:
+  #         paths:
+  #           - path: /
+  #             pathType: Prefix
+  #             backend:
+  #               service:
+  #                 name: password-generator-service
+  #                 port:
+  #                   number: 80

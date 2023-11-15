@@ -4,7 +4,18 @@ kind: Ingress
 metadata:
   name: "{{ .Values.appName }}-ingress"
   namespace: {{ .Values.appNamespace }}
+  annotations:
+{{ toYaml .Values.ingress.annotations | indent 4 }}
 spec:
+  {{- if .Values.ingress.specOverride }}
+{{ toYaml .Values.ingress.specOverride | indent 2 }}
+  {{- else }}
+  {{- if .Values.ingress.tlsEnabled }}
+  tls:
+  - hosts:
+    - {{ .Values.ingress.host }}
+    secretName: {{ .Values.ingress.tlsSecret }}
+  {{- end }}
   rules:
   - host: {{ .Values.ingress.host }}
     http:
@@ -16,3 +27,4 @@ spec:
             name: "{{ .Values.appName }}-service"
             port:
               number: 80
+  {{- end }}
