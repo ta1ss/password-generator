@@ -1,13 +1,15 @@
-# HELM charts
+# HELM chart
 
 
 ### Installing 
 ```
-helm install password-generator password-generator/ -n password-generator
+kubectl create namespace password-generator
+helm install password-generator helm/ -n password-generator
+kubectl apply -f helm/deployment.yaml -n password-generator
 ```
 
 ### Upgrading
 
 ```
-helm upgrade password-generator password-generator/ --values password-generator/values.yaml -n password-generator
+helm upgrade password-generator helm/ --values helm/values.yaml -n password-generator
 ```
