@@ -28,6 +28,7 @@ type Values struct {
 	INSIDE_SYMBOLS       string            `yaml:"INSIDE_SYMBOLS"`
 	PASSWORD_PER_ROUTINE int               `yaml:"PASSWORD_PER_ROUTINE"`
 	SYMBOL_MAPPING       map[string]string `yaml:"SYMBOL_MAPPING"`
+	WORDLIST_PATH        string            `yaml:"WORDLIST_PATH"`
 }
 
 var (
