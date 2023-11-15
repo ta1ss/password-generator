@@ -66,34 +66,3 @@ spec:
         runAsUser: {{ .Values.securityContext.runAsUser }}
         fsGroup: {{ .Values.securityContext.fsGroup }}
       terminationGracePeriodSeconds: 30
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: "{{ .Values.appName }}-service"
-  namespace: {{ .Values.appNamespace }}
-spec:
-  selector:
-    app: {{ .Values.appName }}
-  ports:
-  - protocol: {{ .Values.service.protocol }}
-    port: {{ .Values.service.port }}
-    targetPort: {{ .Values.service.targetPort }}
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: "{{ .Values.appName }}-ingress"
-  namespace: {{ .Values.appNamespace }}
-spec:
-  rules:
-  - host: {{ .Values.ingress.host }}
-    http:
-      paths:
-      - pathType: Prefix
-        path: /
-        backend:
-          service:
-            name: "{{ .Values.appName }}-service"
-            port:
-              number: 80
