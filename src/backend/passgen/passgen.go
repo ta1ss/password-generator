@@ -2,19 +2,17 @@ package passgen
 
 import (
 	cryptorand "crypto/rand"
+	"errors"
 	"log"
 	"math/big"
 	"math/rand"
 	"os"
 	"strings"
 	"sync"
-	"time"
 )
 
 type PasswordGenerator struct {
-	wordlist   []string
-	randomizer *rand.Rand
-	mu_rand    sync.Mutex
+	wordlist []string
 }
 
 type Password struct {
@@ -47,8 +45,7 @@ func newPasswordGenerator(filename string) (*PasswordGenerator, error) {
 		}
 	})
 	generator := &PasswordGenerator{
-		wordlist:   wordList,
-		randomizer: rand.New(rand.NewSource(time.Now().UnixNano())),
+		wordlist: wordList,
 	}
 
 	return generator, nil
@@ -63,10 +60,24 @@ func loadWordsFromFile(filename string) ([]string, error) {
 	return strings.Split(string(data), "\n"), nil
 }
 
+func getSymbol(pg *PasswordGenerator, symbols string) (string, error) {
+	// Handle the case where symbols is empty.
+	if symbols == "" {
+		return "", errors.New("symbol list is empty")
+	}
+	// Handle the case where symbols has only one char.
+	if len(symbols) == 1 {
+		return symbols, nil
+	}
+	symbolIndex := rand.Intn(len(symbols))
+	symbol := string(symbols[symbolIndex])
+
+	return symbol, nil
+}
+
 func (pg *PasswordGenerator) generator(values Values) (string, string) {
+	var symbol string
 	passwordWords := make([]string, 3)
-	pg.mu_rand.Lock()
-	defer pg.mu_rand.Unlock()
 	totalLength := 0
 	for totalLength < values.MIN_PASSWORD_LENGTH || totalLength > values.MAX_PASSWORD_LENGTH-2 {
 		totalLength = 0
@@ -77,9 +88,10 @@ func (pg *PasswordGenerator) generator(values Values) (string, string) {
 		}
 	}
 	plainPassword := strings.Join(passwordWords, " ")
-	symbolIndex := pg.randomizer.Intn(len(values.BETWEEN_SYMBOLS))
-	symbol := string(values.BETWEEN_SYMBOLS[symbolIndex])
-
+	symbol, err := getSymbol(pg, values.BETWEEN_SYMBOLS)
+	if err != nil {
+		symbol = ""
+	}
 	symbolPassword := strings.Join(passwordWords, symbol)
 	return plainPassword, symbolPassword
 }
@@ -99,7 +111,11 @@ func addRandomSymbols(pwd []rune, modifiedIndexes []int, values Values) ([]rune,
 		index := rand.Intn(len(pwd)-2) + 1
 
 		if !contains(modifiedIndexes, index) {
-			pwd[index] = []rune(string(values.INSIDE_SYMBOLS[rand.Intn(len(values.INSIDE_SYMBOLS))]))[0]
+			symbol, err := getSymbol(pg, values.INSIDE_SYMBOLS)
+			if err != nil {
+				log.Fatalf("INSIDE_SYMBOLS is empty")
+			}
+			pwd[index] = []rune(string(symbol))[0]
 			modifiedIndexes = append(modifiedIndexes, index)
 			i++
 		}
