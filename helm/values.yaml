@@ -4,6 +4,38 @@ appNamespace: password-generator
 replicaCount: 1
 ginMode: release
 
+# Replace this with your data
+wordlistConfigMap:
+  enabled: false
+  create: true
+  data:
+    wordlist.txt: |
+      insert
+      your
+      wordlist
+      here
+
+# For bigger files upload the file `kubectl -n password-generator create configmap my-wordlist --from-file=wordlist.txt`
+# wordlistConfigMap:
+#   enabled: true
+#   create: false
+#   nameOverride: my-wordlist
+#   mountPath: /app/wordlists
+
+valuesConfigMap:
+  enabled: true
+  data:
+    values.yaml: |
+      MIN_PASSWORD_LENGTH: 15       # minimum length of the password
+      MAX_PASSWORD_LENGTH: 32        # maximum length of the password
+      BETWEEN_SYMBOLS: ""            # define symbols for between the words
+      INSIDE_SYMBOLS: "@"             # define symbols for the words
+      PASSWORD_PER_ROUTINE: 300      # generated passwords per GO routine          
+      SYMBOL_MAPPING:                # define which char you want to be swapped     
+        # key: value                   # value is mapped to key
+        # a: b
+      WORDLIST_PATH: "data/wordlist.txt"  # Path to wordlist    
+
 resources:
   requests:
     cpu: 10m
@@ -23,8 +55,15 @@ securityContext:
     { type: "RuntimeDefault" }
 
 image:
-  name: 
-  tag: 
+  name: ghcr.io/ta1ss/password-generator
+  tag: latest
+imagePullPolicy: IfNotPresent
+
+# Registry login creds are needed if using private registry
+# Secret can be set 
+# kubectl create secret docker-registry imagecredentials --docker-server=DOCKER_REGISTRY_SERVER --docker-username=DOCKER_USER --docker-password=DOCKER_PASSWORD
+imagePullSecrets:
+  - name: imagecredentials
 
 service:
   protocol: TCP
@@ -32,4 +71,4 @@ service:
   targetPort: 8080
 
 ingress:
-  host: 
+  host: password-generator.example.com

@@ -13,6 +13,8 @@ INSIDE_SYMBOLS: ""             # define symbols for the words
 PASSWORD_PER_ROUTINE: 300      # generated passwords per GO routine          
 SYMBOL_MAPPING:                # define which char you want to be swapped     
   key: value                   # value is mapped to key
+WORDLIST_PATH: "wordlists/wordlist.txt"  # Path to wordlist
+
 ```
 3. Build and Run Docker image
 ```

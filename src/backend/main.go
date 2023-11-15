@@ -21,7 +21,6 @@ import (
 const (
 	defaultNumPasswords = 1
 	maxNumPasswords     = 1000
-	wordlistPath        = "wordlists/wordlist.txt"
 )
 
 var (
@@ -127,7 +126,7 @@ func jsonHandler(c *gin.Context) {
 	if err != nil || numPasswords < 1 || numPasswords > maxNumPasswords {
 		numPasswords = defaultNumPasswords
 	}
-	passwords, err := passgen.GeneratePasswords(wordlistPath, numPasswords, values)
+	passwords, err := passgen.GeneratePasswords(values.WORDLIST_PATH, numPasswords, values)
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Error: %s", err.Error()))
 		return
