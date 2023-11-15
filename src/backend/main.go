@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
+	"sync"
 
 	"net/http"
 	"passgen/passgen"
@@ -32,6 +34,7 @@ var (
 		},
 		[]string{"path", "method"},
 	)
+	once     sync.Once
 	wordList []string
 	values   passgen.Values
 )
