@@ -1,5 +1,5 @@
 # password-generator
-This is a customizable password generator that creates strong and unique passwords based on a wordlist. <br> 
+This is a customizable password generator written in Go, that creates strong and unique passwords based on a wordlist. <br> 
 The generator combines three random words from the wordlist, capitalizes, maps, and inserts symbols defined in values.
 
 
@@ -31,7 +31,7 @@ WORDLIST_PATH: "wordlists/wordlist.txt"  # Path to wordlist
 
 ```
 3. Build and Run Docker image
-```
-docker build -t password-generator . 
-docker run -p 8080:8080 password-generator
+```bash
+$ docker build -t password-generator . 
+$ docker run -p 8080:8080 password-generator
 ```

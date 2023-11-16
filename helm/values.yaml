@@ -4,23 +4,23 @@ appNamespace: password-generator
 replicaCount: 1
 ginMode: release
 
-# Replace this with your data
-wordlistConfigMap:
-  enabled: false
-  create: true
-  data:
-    wordlist.txt: |
-      insert
-      your
-      wordlist
-      here
+# # Replace this with your data
+# wordlistConfigMap:
+#   enabled: false
+#   create: true
+#   data:
+#     wordlist.txt: |
+#       insert
+#       your
+#       wordlist
+#       here
 
 # For bigger files upload the file `kubectl -n password-generator create configmap my-wordlist --from-file=wordlist.txt`
-# wordlistConfigMap:
-#   enabled: true
-#   create: false
-#   nameOverride: my-wordlist
-#   mountPath: /app/wordlists
+wordlistConfigMap:
+  enabled: true
+  create: false
+  nameOverride: my-wordlist
+  mountPath: /app/wordlists
 
 valuesConfigMap:
   enabled: true
