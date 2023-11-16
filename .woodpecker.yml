@@ -1,17 +1,21 @@
+variables:
+  - &plugin-kaniko 'ghcr.io/mindthecap/plugin-kaniko@sha256:e9b05649b4975f1adb634ca4089ac16bd6af336a160f9d2e11ecbfda08e3482e'
+
 steps:
   securitycheck:
     group: build
     when:
-      - branch: [master, ]
-    image: 
+      - branch: [master, dev]
+    image: ghcr.io/mindthecap/trivy-offline:latest
     commands:
-      - 
+      - trivy fs --skip-db-update --exit-code 1 --severity HIGH,CRITICAL .
+      - trivy fs --skip-db-update --exit-code 0 --severity MEDIUM .
 
   go-test-step:
     group: build
     when:
       - path: "src/backend/**"
-    image: 
+    image: *plugin-kaniko
     settings:
       dry_run: true
       target: gotest
@@ -19,15 +23,15 @@ steps:
 
   build:
     when:
-      - branch: [master, ]
-    image: 
+      - branch: [master]
+    image: *plugin-kaniko
     settings:
-      repo: 
+      repo: ${CI_REPO}
       auto_tag: "true"
-      registry: 
+      registry: ${REGISTRY}
       cache: "true"
       username:
         from_secret: <woodpecker_username>
       password:
         from_secret: <woodpecker_secret>
-      mirror:
+      mirror: ${DOCKERIO_MIRROR}

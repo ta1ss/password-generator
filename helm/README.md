@@ -5,7 +5,6 @@
 ```
 kubectl create namespace password-generator
 helm install password-generator helm/ -n password-generator
-kubectl apply -f helm/deployment.yaml -n password-generator
 ```
 
 ### Upgrading
