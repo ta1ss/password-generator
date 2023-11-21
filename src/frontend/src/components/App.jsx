@@ -116,10 +116,10 @@ function App() {
                     <NavLink to="/help" className="custom-link">
                         Help
                     </NavLink>
+                    <span className="vertical-line"></span>
                     <NavLink to="/json" className="custom-link">
                         JSON
                     </NavLink>
-                    <span className="vertical-line"></span>
                 </div>
             </div>
 
