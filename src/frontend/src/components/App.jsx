@@ -1,17 +1,15 @@
 import '../styles/App.css';
 import PasswordTable from './PasswordTable.jsx';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { PasswordGeneratorClient } from './PassgenServiceClientPb';
+import { GenerateRequest } from './passgen_pb'
 
 function App() {
     const [passwords, setPasswords] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [num, setNum] = useState("1");
-    const [isInputValid, setIsInputValid] = useState(true);
-
-    const [jsonLink, setJsonLink] = useState(`${window.location.origin}/json`);
-
-    
+    const [isInputValid, setIsInputValid] = useState(true);    
     const location = useLocation();
 
     useEffect(() => {
@@ -48,19 +46,25 @@ function App() {
             setIsLoading(true);
             setIsInputValid(true);
 
-            const newURL = `${window.location.origin}?num=${num}`;
-            window.history.replaceState({}, '', newURL);
+            const client = new PasswordGeneratorClient('');
+            let request = new GenerateRequest();
+            request.setLen(parseInt(num));
 
-            fetch(`/json?num=${num}`)
-                .then((response) => response.json())
-                .then((data) => {
-                    setPasswords(data);
+
+            client.getPasswords(request, {}, (err, response) => {
+                if (err) {
+                    console.error("Error calling GetPasswords:", err.message);
                     setIsLoading(false);
-                })
-                .catch((error) => {
-                    console.error("Error fetching data:", error);
+                } else {
+                    const passwords = response.getPasswordsList().map(p => ({
+                        xkcd: p.getXkcd(),
+                        original: p.getOriginal(),
+                        length: p.getLength()
+                    }));
+                    setPasswords(passwords);
                     setIsLoading(false);
-                });
+                }
+            });
         } else {
             setPasswords([]);
             setIsInputValid(false);
@@ -75,17 +79,25 @@ function App() {
             setIsLoading(true);
             setIsInputValid(true);
 
-            setJsonLink(`${window.location.origin}/json?num=${inputValue}`);
-            fetch(`/json?num=${inputValue}`)
-                .then((response) => response.json())
-                .then((data) => {
-                    setPasswords(data);
+            const client = new PasswordGeneratorClient('');
+            let request = new GenerateRequest();
+            request.setLen(parseInt(num));
+
+
+            client.getPasswords(request, {}, (err, response) => {
+                if (err) {
+                    console.error("Error calling GetPasswords:", err.message);
                     setIsLoading(false);
-                })
-                .catch((error) => {
-                    console.error("Error fetching data:", error);
+                } else {
+                    const passwords = response.getPasswordsList().map(p => ({
+                        xkcd: p.getXkcd(),
+                        original: p.getOriginal(),
+                        length: p.getLength()
+                    }));
+                    setPasswords(passwords);
                     setIsLoading(false);
-                });
+                }
+            });
         } else {
             setPasswords([]);
             setIsInputValid(false);
@@ -104,10 +116,10 @@ function App() {
                     <NavLink to="/help" className="custom-link">
                         Help
                     </NavLink>
-                    <span className="vertical-line"></span>
-                    <a id="jsonLink" href={jsonLink} className="custom-link">
+                    <NavLink to="/json" className="custom-link">
                         JSON
-                    </a>
+                    </NavLink>
+                    <span className="vertical-line"></span>
                 </div>
             </div>
 

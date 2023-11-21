@@ -2,6 +2,7 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import App from './components/App.jsx'
 import Help from './components/Help.jsx';
+import JSON from './components/JSON.jsx';
 import 'bootstrap/dist/css/bootstrap.css';
 
 
@@ -12,6 +13,7 @@ root.render(
     <Routes>
       <Route path="/" element={<App />} />
       <Route path="/help" element={<Help />} />
+      <Route path="/json" element={<JSON />} />
     </Routes>
   </BrowserRouter>
 );

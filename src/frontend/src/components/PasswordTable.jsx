@@ -59,8 +59,8 @@ function PasswordTable({ passwords }) {
                 <tbody>
                     {passwords.map((password, index) => (
                         <tr key={index}>
-                            <td className={`generated ${highlightedColumn === 'generated' ? 'highlighted' : ''}`}>{password.Xkcd}</td>
-                            <td className={`original ${highlightedColumn === 'original' ? 'highlighted' : ''}`}>{password.Original}</td>
+                            <td className={`generated ${highlightedColumn === 'generated' ? 'highlighted' : ''}`}>{password.xkcd}</td>
+                            <td className={`original ${highlightedColumn === 'original' ? 'highlighted' : ''}`}>{password.original}</td>
                         </tr>
                     ))}
                 </tbody>

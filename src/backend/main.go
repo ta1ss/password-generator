@@ -1,22 +1,24 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"strings"
-	"sync"
 
 	"net/http"
 	"passgen/passgen"
-	"strconv"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	jsoniter "github.com/json-iterator/go"
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/soheilhy/cmux"
+	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
 )
 
@@ -34,7 +36,6 @@ var (
 		},
 		[]string{"path", "method"},
 	)
-	once     sync.Once
 	wordList []string
 	values   passgen.Values
 )
@@ -56,7 +57,7 @@ func PrometheusMiddleware(c *gin.Context) {
 func setSecurityHeaders(c *gin.Context) {
 	c.Header("X-Content-Type-Options", "nosniff")
 	c.Header("X-Frame-Options", "DENY")
-	c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'; form-action 'self';")
+	//c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; form-action 'self';")
 }
 
 func main() {
@@ -71,34 +72,60 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading values:", err)
 	}
-	once.Do(func() {
-		wordList, err = loadWordsFromFile(values.WORDLIST_PATH)
-		if err != nil {
-			log.Fatalf("Error loading wordlist: %v", err)
-		}
-	})
+	wordList, err = loadWordsFromFile(values.WORDLIST_PATH)
+	if err != nil {
+		log.Fatalf("Error loading wordlist: %v", err)
+	}
+
+	// Create the main listener.
+	lis, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+
+	// Create a cmux instance
+	m := cmux.New(lis)
+
+	// Match connections in order: first gRPC, then HTTP.
+	grpcL := m.Match(cmux.HTTP2HeaderField("content-type", "application/grpc"))
+	httpL := m.Match(cmux.Any())
+
+	// Create a gRPC server
+	grpcServer := grpc.NewServer()
+	passgen.RegisterPasswordGeneratorServer(grpcServer, &server{})
+
+	// Wrap the gRPC server with gRPC-Web wrapper
+	wrappedGrpc := grpcweb.WrapServer(grpcServer)
+
 	r := gin.New()
 	r.Use(PrometheusMiddleware)
 	r.Use(gin.Recovery())
 	r.Use(cors.Default())
-
 	r.Use(setSecurityHeaders)
-
 	r.Static("/static", "./static")
-
+	r.StaticFile("/robots.txt", "./robots.txt")
 	r.NoRoute(func(c *gin.Context) {
 		c.File("./index.html")
 	})
-
-	r.GET("/json", jsonHandler)
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	server := &http.Server{
-		Addr:         ":8080",
-		Handler:      r,
+		Addr: ":8080",
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			if wrappedGrpc.IsGrpcWebRequest(req) {
+				// This is a gRPC-Web request, handle it using the gRPC-Web wrapper
+				wrappedGrpc.ServeHTTP(w, req)
+			} else {
+				// This is a regular HTTP request, handle it using Gin
+				r.ServeHTTP(w, req)
+			}
+		}),
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
 	}
 
-	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	// Use goroutines to serve different protocols concurrently
+	go grpcServer.Serve(grpcL)
+	go server.Serve(httpL)
 
 	go func() {
 		metricsRouter := gin.New()
@@ -108,9 +135,9 @@ func main() {
 		metricsRouter.Run(":9090")
 	}()
 
-	fmt.Printf("Starting server on :8080\n")
-	if err := server.ListenAndServe(); err != nil {
-		panic(err)
+	// Start cmux serving
+	if err := m.Serve(); err != nil {
+		log.Fatalf("cmux serve failed: %v", err)
 	}
 }
 
@@ -127,6 +154,7 @@ func loadValues() (passgen.Values, error) {
 
 	return values, nil
 }
+
 func loadWordsFromFile(filename string) ([]string, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -136,24 +164,29 @@ func loadWordsFromFile(filename string) ([]string, error) {
 	return strings.Split(string(data), "\n"), nil
 }
 
-func jsonHandler(c *gin.Context) {
-	numPasswordsStr := c.Query("num")
-	numPasswords, err := strconv.Atoi(numPasswordsStr)
-	if err != nil || numPasswords < 1 || numPasswords > maxNumPasswords {
+type server struct {
+	passgen.UnimplementedPasswordGeneratorServer
+}
+
+func (s *server) GetPasswords(ctx context.Context, req *passgen.GenerateRequest) (*passgen.GenerateResponse, error) {
+	numPasswords := req.GetLen()
+	if numPasswords < 1 || numPasswords > maxNumPasswords {
 		numPasswords = defaultNumPasswords
 	}
-	passwords, err := passgen.GeneratePasswords(numPasswords, values, wordList)
-	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Error: %s", err.Error()))
-		return
-	}
-	passwordData = passwords
-	jsonBytes, err := jsoniter.ConfigCompatibleWithStandardLibrary.Marshal(passwordData)
 
+	passwords, err := passgen.GeneratePasswords(int(numPasswords), values, wordList)
 	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Error: %s", err.Error()))
-		return
+		return nil, err
 	}
 
-	c.Data(http.StatusOK, "application/json", jsonBytes)
+	var grpcPasswords []*passgen.Message
+	for _, pwd := range passwords {
+		grpcPasswords = append(grpcPasswords, &passgen.Message{
+			Xkcd:     pwd.Xkcd,
+			Original: pwd.Original,
+			Length:   int32(pwd.Length),
+		})
+	}
+
+	return &passgen.GenerateResponse{Passwords: grpcPasswords}, nil
 }

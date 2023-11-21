@@ -1,0 +1,21 @@
+syntax = "proto3";
+option go_package = "passgen/passgen";
+package passgen;
+
+service PasswordGenerator {
+    rpc GetPasswords(GenerateRequest) returns (GenerateResponse);
+}
+
+message GenerateRequest {
+    int32 len = 1;
+}
+
+message GenerateResponse {
+    repeated Message passwords = 1;
+}
+
+message Message {
+    string xkcd = 1;
+    string original = 2;
+    int32 length = 3;
+}
