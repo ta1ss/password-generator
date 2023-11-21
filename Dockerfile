@@ -28,9 +28,9 @@ RUN npm run build
 # Final stage
 FROM scratch
 WORKDIR /app
-COPY /src/backend/wordlists /app/wordlists
-COPY /src/backend/values /app/values
 COPY --from=compressor /app/password-generator .
 COPY --from=frontend /app/dist /app
+COPY /src/backend/wordlists /app/wordlists
+COPY /src/backend/values /app/values
 EXPOSE 8080
 CMD ["./password-generator"]
