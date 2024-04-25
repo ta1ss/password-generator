@@ -6,7 +6,9 @@
 	"image": "mcr.microsoft.com/devcontainers/go:1-1.22-bookworm",
 	"features": {
 		"ghcr.io/devcontainers/features/node:1": {},
-		"ghcr.io/devcontainers/features/docker-in-docker": {}
+		"ghcr.io/devcontainers/features/docker-in-docker": {},
+		"ghcr.io/devcontainers-contrib/features/trivy": {},
+		"ghcr.io/devcontainers-contrib/features/k6": {},
 	},
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
