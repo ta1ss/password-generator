@@ -18,7 +18,7 @@ RUN go test
 RUN cd passgen && go test
 
 # Frontend Build stage
-FROM node:20.12.2 AS frontend
+FROM node:22.0.0 AS frontend
 WORKDIR /app
 COPY ./src/frontend/package*.json ./
 RUN npm install
