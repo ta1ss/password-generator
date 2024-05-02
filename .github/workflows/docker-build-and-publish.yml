@@ -23,8 +23,23 @@ env:
 
 
 jobs:
-  build:
+  test:
+    runs-on: ubuntu-latest
 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Run gotests
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: false
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:gotest
+          target: gotest
+
+  build:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
