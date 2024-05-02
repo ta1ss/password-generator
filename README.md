@@ -35,3 +35,18 @@ WORDLIST_PATH: "wordlists/wordlist.txt"  # Path to wordlist
 $ docker build -t password-generator . 
 $ docker run -p 8080:8080 password-generator
 ```
+
+
+## Testing
+
+Testing is a complex task. Tests are located in the `k6` folder and run like this:
+```bash
+k6 run k6/loadtesting.js
+```
+
+## Security testing
+
+Security scanning of the source code inside devcontainer:
+```bash
+trivy fs .
+```
