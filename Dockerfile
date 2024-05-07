@@ -18,18 +18,22 @@ COPY src/backend .
 RUN go test
 RUN cd passgen && go test
 
+# Frontend npm install
+FROM ${frontendbuildimage} as npminstall
+WORKDIR /app
+COPY src/frontend .
+RUN npm install
+
 # Frontend Lint stage
 FROM ${frontendbuildimage} as npmlint
 WORKDIR /app
-COPY src/frontend .
+COPY --from=npminstall /app .
 RUN npm run lint
 
 # Frontend Build stage
 FROM ${frontendbuildimage} AS frontend
 WORKDIR /app
-COPY ./src/frontend/package*.json ./
-RUN npm install
-COPY ./src/frontend ./
+COPY --from=npminstall /app .
 RUN npm run build
 
 # Final stage
