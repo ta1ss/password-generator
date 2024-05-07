@@ -38,6 +38,14 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:gotest
           target: gotest
 
+      - name: Run npm lint
+        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
+        with:
+          context: .
+          push: false
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:npmlint
+          target: npmlint
+
   build:
     needs: test
     runs-on: ubuntu-latest
