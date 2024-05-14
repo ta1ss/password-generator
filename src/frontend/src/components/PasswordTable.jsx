@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
+import PropTypes from 'prop-types';
+import { useState } from 'react';
 
+PasswordTable.propTypes = {
+    passwords: PropTypes.array.isRequired,
+};
 
 function PasswordTable({ passwords }) {
     const [highlightedColumn, setHighlightedColumn] = useState(null);

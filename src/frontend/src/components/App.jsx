@@ -3,6 +3,12 @@ import PasswordTable from './PasswordTable.jsx';
 import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 
+function getNumFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const numParam = urlParams.get('num');
+    return numParam;
+}
+
 function App() {
     const [passwords, setPasswords] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
