@@ -70,6 +70,8 @@ func main() {
 
 	r.Use(setSecurityHeaders)
 
+	r.UseH2C = true // Enable HTTP/2
+
 	r.Static("/static", "./static")
 
 	r.NoRoute(func(c *gin.Context) {
@@ -80,7 +82,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:         ":8080",
-		Handler:      r,
+		Handler:      r.Handler(),
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
 	}
 
