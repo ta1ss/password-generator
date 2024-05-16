@@ -6,13 +6,13 @@ import { NavLink, useLocation } from 'react-router-dom';
 function getNumFromURL() {
     const urlParams = new URLSearchParams(window.location.search);
     const numParam = urlParams.get('num');
-    return numParam;
+    return numParam || "1";
 }
 
 function App() {
     const [passwords, setPasswords] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [num, setNum] = useState("1");
+    const [num, setNum] = useState(getNumFromURL());
     const [isInputValid, setIsInputValid] = useState(true);
 
     const [jsonLink, setJsonLink] = useState(`${window.location.origin}/json`);
