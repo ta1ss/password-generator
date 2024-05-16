@@ -202,7 +202,7 @@ func (pg *PasswordGenerator) GeneratePasswords(numPasswords int) ([]Password, er
 	var wg sync.WaitGroup
 	passwords := make([]Password, numPasswords)
 	resultChan := make(chan Password, numPasswords)
-	log.Default().Printf("Generating %d passwords per %d routine\n", numPasswords, pg.values.PASSWORD_PER_ROUTINE)
+
 	numGoroutines := (numPasswords + pg.values.PASSWORD_PER_ROUTINE - 1) / pg.values.PASSWORD_PER_ROUTINE
 
 	for g := 0; g < numGoroutines; g++ {
