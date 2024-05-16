@@ -41,6 +41,7 @@ FROM scratch
 WORKDIR /app
 COPY --from=compressor /app/password-generator .
 COPY --from=frontend /app/dist /app
+COPY --from=frontend /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY /src/backend/wordlists /app/wordlists
 COPY /src/backend/values /app/values
 EXPOSE 8080

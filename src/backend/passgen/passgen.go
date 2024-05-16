@@ -3,9 +3,11 @@ package passgen
 import (
 	cryptorand "crypto/rand"
 	"errors"
+	"io"
 	"log"
 	"math/big"
 	"math/rand"
+	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -37,10 +39,14 @@ var (
 	wordList []string
 )
 
-func newPasswordGenerator(filename string) (*PasswordGenerator, error) {
+func newPasswordGenerator(file string) (*PasswordGenerator, error) {
 	var err error
 	once.Do(func() {
-		wordList, err = loadWordsFromFile(filename)
+		if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") {
+			wordList, err = loadWordsFromURL(file)
+		} else {
+			wordList, err = loadWordsFromFile(file)
+		}
 		if err != nil {
 			log.Fatalf("Error loading wordlist: %v", err)
 		}
@@ -50,6 +56,20 @@ func newPasswordGenerator(filename string) (*PasswordGenerator, error) {
 	}
 
 	return generator, nil
+}
+
+func loadWordsFromURL(url string) ([]string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Fatalf("Error fetching wordlist from URL: %v", err)
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("Error reading wordlist from URL: %v", err)
+	}
+	log.Default().Printf("Loaded %d words from URL\n", len(strings.Split(string(data), "\n")))
+	return strings.Split(string(data), "\n"), nil
 }
 
 func loadWordsFromFile(filename string) ([]string, error) {

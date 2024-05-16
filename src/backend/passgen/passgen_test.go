@@ -91,6 +91,13 @@ func TestAddRandomUppercase(t *testing.T) {
 	}
 }
 
+func TestLoadWordsFromURL(t *testing.T) {
+	_, err := loadWordsFromURL("https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt")
+	if err != nil {
+		t.Errorf("Error loading words from URL: %v", err)
+	}
+}
+
 func TestAddRandomNumber(t *testing.T) {
 	pwd := []rune("password")
 	originalPwd := string(pwd)
