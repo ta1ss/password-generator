@@ -9,9 +9,13 @@ import (
 )
 
 var testValues Values
+var pg *PasswordGenerator
 
 func TestMain(m *testing.M) {
 	testValues, _ = loadValues()
+	// wordlist path is one level up
+	testValues.WORDLIST_PATH = "../" + testValues.WORDLIST_PATH
+	pg, _ = NewPasswordGenerator(testValues)
 	os.Exit(m.Run())
 }
 
@@ -35,7 +39,7 @@ func TestApplyModifications(t *testing.T) {
 	pwd := []rune("password")
 	originalPwd := string(pwd)
 	modifiedIndexes := []int{1, 3}
-	result := applyModifications(pwd, modifiedIndexes, testValues)
+	result := pg.applyModifications(pwd, modifiedIndexes)
 
 	if len(pwd) != len(result) {
 		t.Errorf("Expected length: %d, Got: %d", len(originalPwd), len(result))
@@ -53,7 +57,7 @@ func TestMapSymbols(t *testing.T) {
 		expected = append(expected, []rune(v)...)
 	}
 
-	result := mapSymbols(input, testValues)
+	result := pg.mapSymbols(input)
 
 	if string(result) != string(expected) {
 		t.Errorf("Expected: %s, Got: %s", string(expected), string(result))
@@ -65,7 +69,7 @@ func TestAddRandomSymbols(t *testing.T) {
 	originalPwd := string(pwd)
 
 	modifiedIndexes := []int{1, 3}
-	modifiedPwd, modifiedIndexes := addRandomSymbols(pwd, modifiedIndexes, testValues)
+	modifiedPwd, modifiedIndexes := pg.addRandomSymbols(pwd, modifiedIndexes)
 
 	if len(modifiedIndexes) < 3 || len(modifiedIndexes) > 4 {
 		t.Errorf("Expected 3/4 modified indexes, Got: %d", len(modifiedIndexes))
@@ -80,7 +84,7 @@ func TestAddRandomUppercase(t *testing.T) {
 	pwd := []rune("password")
 	originalPwd := string(pwd)
 	modifiedIndexes := []int{1, 3}
-	modifiedPwd, modifiedIndexes := addRandomUppercase(pwd, modifiedIndexes)
+	modifiedPwd, modifiedIndexes := pg.addRandomUppercase(pwd, modifiedIndexes)
 
 	if len(modifiedIndexes) < 3 || len(modifiedIndexes) > 4 {
 		t.Errorf("Expected 3/4 modified indexes, Got: %d", len(modifiedIndexes))
@@ -102,7 +106,7 @@ func TestAddRandomNumber(t *testing.T) {
 	pwd := []rune("password")
 	originalPwd := string(pwd)
 	modifiedIndexes := []int{1, 3}
-	modifiedPwd, modifiedIndexes := addRandomNumber(pwd, modifiedIndexes)
+	modifiedPwd, modifiedIndexes := pg.addRandomNumber(pwd, modifiedIndexes)
 
 	if len(modifiedIndexes) < 3 || len(modifiedIndexes) > 4 {
 		t.Errorf("Expected 3/4 modified indexes, Got: %d", len(modifiedIndexes))

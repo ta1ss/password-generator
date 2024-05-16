@@ -15,8 +15,7 @@ CMD ["upx", "--best", "-qq", "/app/password-generator"]
 FROM ${builderimage} as gotest
 WORKDIR /app
 COPY src/backend .
-RUN go test
-RUN cd passgen && go test
+RUN go test ./...
 
 # Frontend npm install
 FROM ${frontendbuildimage} as npminstall
