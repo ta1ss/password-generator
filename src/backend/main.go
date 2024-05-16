@@ -115,7 +115,35 @@ func loadValues() (passgen.Values, error) {
 		return values, err
 	}
 
+	// Override with environment variables
+	values.MIN_PASSWORD_LENGTH = getEnvAsInt("MIN_PASSWORD_LENGTH", values.MIN_PASSWORD_LENGTH)
+	values.MAX_PASSWORD_LENGTH = getEnvAsInt("MAX_PASSWORD_LENGTH", values.MAX_PASSWORD_LENGTH)
+	values.BETWEEN_SYMBOLS = getEnv("BETWEEN_SYMBOLS", values.BETWEEN_SYMBOLS)
+	values.INSIDE_SYMBOLS = getEnv("INSIDE_SYMBOLS", values.INSIDE_SYMBOLS)
+	values.PASSWORD_PER_ROUTINE = getEnvAsInt("PASSWORD_PER_ROUTINE", values.PASSWORD_PER_ROUTINE)
+	values.WORDLIST_PATH = getEnv("WORDLIST_PATH", values.WORDLIST_PATH)
+
 	return values, nil
+}
+
+func getEnv(key, defaultValue string) string {
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		return defaultValue
+	}
+	return value
+}
+
+func getEnvAsInt(key string, defaultValue int) int {
+	valueStr := os.Getenv(key)
+	if len(valueStr) == 0 {
+		return defaultValue
+	}
+	value, err := strconv.Atoi(valueStr)
+	if err != nil {
+		return defaultValue
+	}
+	return value
 }
 
 func jsonHandler(c *gin.Context) {
