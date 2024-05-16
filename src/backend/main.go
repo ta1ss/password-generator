@@ -32,10 +32,19 @@ var (
 		},
 		[]string{"path", "method"},
 	)
+	passwordGenerator *passgen.PasswordGenerator
 )
 
 func init() {
 	prometheus.MustRegister(httpRequestsTotal)
+	values, err := loadValues()
+	if err != nil {
+		log.Fatal("Error loading values:", err)
+	}
+	passwordGenerator, err = passgen.NewPasswordGenerator(values)
+	if err != nil {
+		log.Fatal("Error initiating NewPasswordGenerator:", err)
+	}
 }
 
 func PrometheusMiddleware(c *gin.Context) {
@@ -147,16 +156,12 @@ func getEnvAsInt(key string, defaultValue int) int {
 }
 
 func jsonHandler(c *gin.Context) {
-	values, err := loadValues()
-	if err != nil {
-		log.Fatal("Error loading values:", err)
-	}
 	numPasswordsStr := c.Query("num")
 	numPasswords, err := strconv.Atoi(numPasswordsStr)
 	if err != nil || numPasswords < 1 || numPasswords > maxNumPasswords {
 		numPasswords = defaultNumPasswords
 	}
-	passwords, err := passgen.GeneratePasswords(values.WORDLIST_PATH, numPasswords, values)
+	passwords, err := passwordGenerator.GeneratePasswords(numPasswords)
 	if err != nil {
 		c.String(http.StatusInternalServerError, fmt.Sprintf("Error: %s", err.Error()))
 		return

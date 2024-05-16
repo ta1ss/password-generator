@@ -15,6 +15,7 @@ import (
 
 type PasswordGenerator struct {
 	wordlist []string
+	values   Values
 }
 
 type Password struct {
@@ -34,18 +35,18 @@ type Values struct {
 }
 
 var (
-	pg       *PasswordGenerator
 	once     sync.Once
 	wordList []string
 )
 
-func newPasswordGenerator(file string) (*PasswordGenerator, error) {
+// NewPasswordGenerator creates a new PasswordGenerator instance.
+func NewPasswordGenerator(values Values) (*PasswordGenerator, error) {
 	var err error
 	once.Do(func() {
-		if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") {
-			wordList, err = loadWordsFromURL(file)
+		if strings.HasPrefix(values.WORDLIST_PATH, "http://") || strings.HasPrefix(values.WORDLIST_PATH, "https://") {
+			wordList, err = loadWordsFromURL(values.WORDLIST_PATH)
 		} else {
-			wordList, err = loadWordsFromFile(file)
+			wordList, err = loadWordsFromFile(values.WORDLIST_PATH)
 		}
 		if err != nil {
 			log.Fatalf("Error loading wordlist: %v", err)
@@ -53,6 +54,7 @@ func newPasswordGenerator(file string) (*PasswordGenerator, error) {
 	})
 	generator := &PasswordGenerator{
 		wordlist: wordList,
+		values:   values,
 	}
 
 	return generator, nil
@@ -81,7 +83,7 @@ func loadWordsFromFile(filename string) ([]string, error) {
 	return strings.Split(string(data), "\n"), nil
 }
 
-func getSymbol(pg *PasswordGenerator, symbols string) (string, error) {
+func getSymbol(symbols string) (string, error) {
 	// Handle the case where symbols is empty.
 	if symbols == "" {
 		return "", errors.New("symbol list is empty")
@@ -96,11 +98,11 @@ func getSymbol(pg *PasswordGenerator, symbols string) (string, error) {
 	return symbol, nil
 }
 
-func (pg *PasswordGenerator) generator(values Values) (string, string) {
+func (pg *PasswordGenerator) generator() (string, string) {
 	var symbol string
 	passwordWords := make([]string, 3)
 	totalLength := 0
-	for totalLength < values.MIN_PASSWORD_LENGTH || totalLength > values.MAX_PASSWORD_LENGTH-2 {
+	for totalLength < pg.values.MIN_PASSWORD_LENGTH || totalLength > pg.values.MAX_PASSWORD_LENGTH-2 {
 		totalLength = 0
 		for i := 0; i < 3; i++ {
 			randomIndex, _ := cryptorand.Int(cryptorand.Reader, big.NewInt(int64((len(pg.wordlist)))))
@@ -109,7 +111,7 @@ func (pg *PasswordGenerator) generator(values Values) (string, string) {
 		}
 	}
 	plainPassword := strings.Join(passwordWords, " ")
-	symbol, err := getSymbol(pg, values.BETWEEN_SYMBOLS)
+	symbol, err := getSymbol(pg.values.BETWEEN_SYMBOLS)
 	if err != nil {
 		symbol = ""
 	}
@@ -117,22 +119,22 @@ func (pg *PasswordGenerator) generator(values Values) (string, string) {
 	return plainPassword, symbolPassword
 }
 
-func mapSymbols(input []rune, values Values) []rune {
+func (pg *PasswordGenerator) mapSymbols(input []rune) []rune {
 	for i, char := range input {
-		if replacement, ok := values.SYMBOL_MAPPING[string(char)]; ok {
+		if replacement, ok := pg.values.SYMBOL_MAPPING[string(char)]; ok {
 			input[i] = []rune(replacement)[0]
 		}
 	}
 	return input
 }
 
-func addRandomSymbols(pwd []rune, modifiedIndexes []int, values Values) ([]rune, []int) {
+func (pg *PasswordGenerator) addRandomSymbols(pwd []rune, modifiedIndexes []int) ([]rune, []int) {
 	count := rand.Intn(2) + 1
 	for i := 0; i < count; {
 		index := rand.Intn(len(pwd)-2) + 1
 
 		if !contains(modifiedIndexes, index) {
-			symbol, err := getSymbol(pg, values.INSIDE_SYMBOLS)
+			symbol, err := getSymbol(pg.values.INSIDE_SYMBOLS)
 			if err != nil {
 				log.Fatalf("INSIDE_SYMBOLS is empty")
 			}
@@ -144,7 +146,7 @@ func addRandomSymbols(pwd []rune, modifiedIndexes []int, values Values) ([]rune,
 	return pwd, modifiedIndexes
 }
 
-func addRandomUppercase(pwd []rune, modifiedIndexes []int) ([]rune, []int) {
+func (pg *PasswordGenerator) addRandomUppercase(pwd []rune, modifiedIndexes []int) ([]rune, []int) {
 	count := rand.Intn(2) + 1
 	for i := 0; i < count; {
 		index := rand.Intn(len(pwd))
@@ -158,7 +160,7 @@ func addRandomUppercase(pwd []rune, modifiedIndexes []int) ([]rune, []int) {
 	return pwd, modifiedIndexes
 }
 
-func addRandomNumber(pwd []rune, modifiedIndexes []int) ([]rune, []int) {
+func (pg *PasswordGenerator) addRandomNumber(pwd []rune, modifiedIndexes []int) ([]rune, []int) {
 	count := rand.Intn(2) + 1
 	for i := 0; i < count; {
 		index := rand.Intn(len(pwd))
@@ -172,16 +174,16 @@ func addRandomNumber(pwd []rune, modifiedIndexes []int) ([]rune, []int) {
 	return pwd, modifiedIndexes
 }
 
-func applyModifications(password []rune, modifiedIndexes []int, values Values) []rune {
+func (pg *PasswordGenerator) applyModifications(password []rune, modifiedIndexes []int) []rune {
 	order := rand.Perm(3)
 	for _, idx := range order {
 		switch idx {
 		case 0:
-			password, modifiedIndexes = addRandomUppercase(password, modifiedIndexes)
+			password, modifiedIndexes = pg.addRandomUppercase(password, modifiedIndexes)
 		case 1:
-			password, modifiedIndexes = addRandomSymbols(password, modifiedIndexes, values)
+			password, modifiedIndexes = pg.addRandomSymbols(password, modifiedIndexes)
 		case 2:
-			password, modifiedIndexes = addRandomNumber(password, modifiedIndexes)
+			password, modifiedIndexes = pg.addRandomNumber(password, modifiedIndexes)
 		}
 	}
 	return password
@@ -196,34 +198,29 @@ func contains(slice []int, val int) bool {
 	return false
 }
 
-func GeneratePasswords(filename string, numPasswords int, values Values) ([]Password, error) {
-	pg, err := newPasswordGenerator(filename)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func (pg *PasswordGenerator) GeneratePasswords(numPasswords int) ([]Password, error) {
 	var wg sync.WaitGroup
 	passwords := make([]Password, numPasswords)
 	resultChan := make(chan Password, numPasswords)
-
-	numGoroutines := (numPasswords + values.PASSWORD_PER_ROUTINE - 1) / values.PASSWORD_PER_ROUTINE
+	log.Default().Printf("Generating %d passwords per %d routine\n", numPasswords, pg.values.PASSWORD_PER_ROUTINE)
+	numGoroutines := (numPasswords + pg.values.PASSWORD_PER_ROUTINE - 1) / pg.values.PASSWORD_PER_ROUTINE
 
 	for g := 0; g < numGoroutines; g++ {
 		wg.Add(1)
 		modifiedIndexes := make([]int, 0)
 
-		numToGenerate := values.PASSWORD_PER_ROUTINE
+		numToGenerate := pg.values.PASSWORD_PER_ROUTINE
 		if g == numGoroutines-1 {
-			numToGenerate = numPasswords - g*values.PASSWORD_PER_ROUTINE
+			numToGenerate = numPasswords - (g * pg.values.PASSWORD_PER_ROUTINE)
 		}
 		go func(numToGenerate int, modifiedIndexes []int) {
 			defer wg.Done()
 
 			for i := 0; i < numToGenerate; i++ {
-				original, modified := pg.generator(values)
+				original, modified := pg.generator()
 				modifiedRune := []rune(modified)
-				xkcd := applyModifications(modifiedRune, modifiedIndexes, values)
-				xkcd = mapSymbols(xkcd, values)
+				xkcd := pg.applyModifications(modifiedRune, modifiedIndexes)
+				xkcd = pg.mapSymbols(xkcd)
 				length := len(xkcd)
 				resultChan <- Password{Xkcd: string(xkcd), Original: original, Length: length}
 			}
