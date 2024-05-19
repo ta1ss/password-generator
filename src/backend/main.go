@@ -33,6 +33,7 @@ var (
 		[]string{"path", "method"},
 	)
 	passwordGenerator *passgen.PasswordGenerator
+	values            passgen.Values
 )
 
 func init() {
@@ -89,6 +90,14 @@ func main() {
 
 	r.GET("/json", jsonHandler)
 
+	r.GET("/api/v1/passwords", jsonHandler)
+
+	r.GET("/api/v1/config/maxPasswordLength", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"maxPasswordLength": values.MAX_PASSWORD_LENGTH})
+	})
+	r.GET("/api/v1/config/minPasswordLength", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"minPasswordLength": values.MIN_PASSWORD_LENGTH})
+	})
 	server := &http.Server{
 		Addr:         ":8080",
 		Handler:      r.Handler(),
@@ -112,7 +121,6 @@ func main() {
 }
 
 func loadValues() (passgen.Values, error) {
-	var values passgen.Values
 
 	yamlFile, err := os.ReadFile("values/values.yaml")
 	if err != nil {
@@ -155,22 +163,53 @@ func getEnvAsInt(key string, defaultValue int) int {
 	return value
 }
 
-func jsonHandler(c *gin.Context) {
-	numPasswordsStr := c.Query("num")
-	numPasswords, err := strconv.Atoi(numPasswordsStr)
-	if err != nil || numPasswords < 1 || numPasswords > maxNumPasswords {
-		numPasswords = defaultNumPasswords
+func getQueryParameterAsInt(c *gin.Context, key string, defaultValue int) int {
+	valueStr := c.Query(key)
+	if len(valueStr) == 0 {
+		return defaultValue
 	}
-	passwords, err := passwordGenerator.GeneratePasswords(numPasswords)
+	value, err := strconv.Atoi(valueStr)
 	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Error: %s", err.Error()))
+		return defaultValue
+	}
+	return value
+}
+
+func jsonHandler(c *gin.Context) {
+	numPasswords := getQueryParameterAsInt(c, "num", defaultNumPasswords)
+	minPasswordLength := getQueryParameterAsInt(c, "minPasswordLength", values.MIN_PASSWORD_LENGTH)
+	maxPasswordLength := getQueryParameterAsInt(c, "maxPasswordLength", values.MAX_PASSWORD_LENGTH)
+
+	// Validate input
+	if numPasswords < 1 || numPasswords > maxNumPasswords {
+		c.String(http.StatusBadRequest, fmt.Sprintf("Invalid number of passwords: %d", numPasswords))
 		return
 	}
+	if minPasswordLength < values.MIN_PASSWORD_LENGTH {
+		c.String(http.StatusBadRequest, fmt.Sprintf("Invalid minPasswordLength: %d", minPasswordLength))
+		return
+	}
+
+	if minPasswordLength > maxPasswordLength {
+		c.String(http.StatusBadRequest, fmt.Sprintf("Minimal password length must be smaller than maximal length. minPasswordLength:%d; maxPasswordLength:%d.", minPasswordLength, maxPasswordLength))
+		return
+	}
+	if maxPasswordLength > values.MAX_PASSWORD_LENGTH {
+		c.String(http.StatusBadRequest, fmt.Sprintf("Invalid maxPasswordLength: %d", maxPasswordLength))
+		return
+	}
+	passwords, err := passwordGenerator.GeneratePasswords(numPasswords, minPasswordLength, maxPasswordLength)
+
+	if err != nil {
+		c.String(http.StatusInternalServerError, fmt.Sprintf("Error generating passwords: %s", err.Error()))
+		return
+	}
+
 	passwordData = passwords
 	jsonBytes, err := jsoniter.ConfigCompatibleWithStandardLibrary.Marshal(passwordData)
 
 	if err != nil {
-		c.String(http.StatusInternalServerError, fmt.Sprintf("Error: %s", err.Error()))
+		c.String(http.StatusInternalServerError, fmt.Sprintf("Error forming JSON: %s", err.Error()))
 		return
 	}
 

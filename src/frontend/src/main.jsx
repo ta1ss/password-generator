@@ -5,7 +5,6 @@ import Help from './components/Help.jsx';
 import 'bootstrap/dist/css/bootstrap.css';
 
 
-
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <BrowserRouter>
