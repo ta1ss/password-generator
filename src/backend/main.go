@@ -2,17 +2,21 @@ package main
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"reflect"
 	"strings"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"net/http"
 	"passgen/passgen"
 	"strconv"
 
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/logger"
 	"github.com/gin-gonic/gin"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/prometheus/client_golang/prometheus"
@@ -42,11 +46,11 @@ func init() {
 	prometheus.MustRegister(httpRequestsTotal)
 	values, err := loadValues()
 	if err != nil {
-		log.Fatal("Error loading values:", err)
+		log.Fatal().Err(err).Msg("Error loading values")
 	}
 	passwordGenerator, err = passgen.NewPasswordGenerator(values)
 	if err != nil {
-		log.Fatal("Error initiating NewPasswordGenerator:", err)
+		log.Fatal().Err(err).Msg("Error initiating NewPasswordGenerator")
 	}
 }
 
@@ -67,15 +71,35 @@ func setSecurityHeaders(c *gin.Context) {
 }
 
 func main() {
+	// Set zerolog to write JSON logs to stdout
+
+	logging_type := os.Getenv("LOGGING_TYPE")
+	if logging_type == "json" {
+		log.Logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
+	} else {
+		zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+		log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).With().Timestamp().Logger()
+	}
 
 	mode := os.Getenv("GIN_MODE")
-	if mode == "release" {
-		gin.SetMode(gin.ReleaseMode)
-	} else {
+	if mode == "debug" {
 		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
 	}
 
 	r := gin.New()
+
+	if logging_type == "json" {
+		r.Use(logger.SetLogger(logger.WithLogger(func(_ *gin.Context, l zerolog.Logger) zerolog.Logger {
+			return l.Output(gin.DefaultWriter).With().Logger()
+		})))
+	} else {
+		r.Use(logger.SetLogger(logger.WithLogger(func(_ *gin.Context, l zerolog.Logger) zerolog.Logger {
+			return l.Output(zerolog.ConsoleWriter{Out: os.Stderr}).With().Logger()
+		})))
+	}
+
 	r.Use(PrometheusMiddleware)
 	r.Use(gin.Recovery())
 	r.Use(cors.Default())
@@ -112,11 +136,13 @@ func main() {
 		metricsRouter := gin.New()
 		metricsRouter.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-		fmt.Printf("Serving metrics on :9090/metrics\n")
-		metricsRouter.Run(":9090")
+		log.Info().Msg("Serving metrics on :9090/metrics")
+		if err := metricsRouter.Run(":9090"); err != nil {
+			log.Fatal().Err(err).Msg("Failed to run metrics server")
+		}
 	}()
 
-	fmt.Printf("Starting server on :8080\n")
+	log.Info().Msg("Starting server on :8080")
 	if err := server.ListenAndServe(); err != nil {
 		panic(err)
 	}

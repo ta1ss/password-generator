@@ -4,7 +4,6 @@ import (
 	cryptorand "crypto/rand"
 	"errors"
 	"io"
-	"log"
 	"math/big"
 	"math/rand"
 	"net/http"
@@ -12,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 type PasswordGenerator struct {
@@ -50,7 +51,7 @@ func NewPasswordGenerator(values Values) (*PasswordGenerator, error) {
 			wordList, err = loadWordsFromFile(values.WORDLIST_PATH)
 		}
 		if err != nil {
-			log.Fatalf("Error loading wordlist: %v", err)
+			log.Fatal().Err(err).Msg("Error loading wordlist")
 		}
 	})
 	generator := &PasswordGenerator{
@@ -64,21 +65,23 @@ func NewPasswordGenerator(values Values) (*PasswordGenerator, error) {
 func loadWordsFromURL(url string) ([]string, error) {
 	resp, err := http.Get(url)
 	if err != nil {
-		log.Fatalf("Error fetching wordlist from URL: %v", err)
+		log.Fatal().Err(err).Msgf("Error fetching wordlist from URL: %s", url)
+		return nil, err
 	}
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalf("Error reading wordlist from URL: %v", err)
+		log.Fatal().Err(err).Msgf("Error reading wordlist from URL: %s", url)
+		return nil, err
 	}
-	log.Default().Printf("Loaded %d words from URL\n", len(strings.Split(string(data), "\n")))
+	log.Info().Msgf("Loaded %d words from URL", len(strings.Split(string(data), "\n")))
 	return strings.Split(string(data), "\n"), nil
 }
 
 func loadWordsFromFile(filename string) ([]string, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		log.Printf("File %s not found.\n", filename)
+		log.Fatal().Err(err).Msgf("Error reading wordlist from file: %s", filename)
 		return nil, err
 	}
 	return strings.Split(string(data), "\n"), nil
@@ -137,7 +140,7 @@ func (pg *PasswordGenerator) addRandomSymbols(pwd []rune, modifiedIndexes []int)
 		if !contains(modifiedIndexes, index) {
 			symbol, err := getSymbol(pg.values.INSIDE_SYMBOLS)
 			if err != nil {
-				log.Fatalf("INSIDE_SYMBOLS is empty")
+				log.Fatal().Err(err).Msg("Error getting INSIDE_SYMBOLS")
 			}
 			pwd[index] = []rune(string(symbol))[0]
 			modifiedIndexes = append(modifiedIndexes, index)
