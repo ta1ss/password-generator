@@ -44,14 +44,21 @@ var (
 // NewPasswordGenerator creates a new PasswordGenerator instance.
 func NewPasswordGenerator(values Values) (*PasswordGenerator, error) {
 	var err error
+    var rawWordList []string
+
 	once.Do(func() {
 		if strings.HasPrefix(values.WORDLIST_PATH, "http://") || strings.HasPrefix(values.WORDLIST_PATH, "https://") {
-			wordList, err = loadWordsFromURL(values.WORDLIST_PATH)
-		} else {
-			wordList, err = loadWordsFromFile(values.WORDLIST_PATH)
-		}
+			rawWordList, err = loadWordsFromURL(values.WORDLIST_PATH)
+			} else {
+				rawWordList, err = loadWordsFromFile(values.WORDLIST_PATH)
+			}
 		if err != nil {
 			log.Fatal().Err(err).Msg("Error loading wordlist")
+		}
+		// Format wordList by removing \r from each word
+		wordList = make([]string, len(rawWordList))
+		for i, word := range rawWordList {
+			wordList[i] = strings.ReplaceAll(word, "\r", "")
 		}
 	})
 	generator := &PasswordGenerator{
