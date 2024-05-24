@@ -23,6 +23,7 @@ RUN ["upx", "--best", "-qq", "/app/password-generator"]
 FROM ${builderimage} as gotest
 WORKDIR /app
 COPY src/backend .
+COPY --from=swagger /app/docs /app/docs
 RUN go test ./...
 
 # Frontend npm install
