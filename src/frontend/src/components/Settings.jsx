@@ -63,7 +63,7 @@ function Settings({ setSettings }) {
         return () => {
             window.removeEventListener('popstate', handlePopstate);
         };
-    },[]);
+    },[minPasswordLengthLimit, maxPasswordLengthLimit]);
 
     return (
         <div> {/* Wrap the two <p> elements inside a <div> */}
