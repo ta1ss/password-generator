@@ -21,18 +21,6 @@ function App() {
 
     const toggle = () => setIsOpen(!isOpen);
 
-    useEffect(() => {
-        const handlePopstate = () => {
-            // setNum(getSettingFromUrl('num', 1));
-        };
-
-        window.addEventListener('popstate', handlePopstate);
-
-        return () => {
-            window.removeEventListener('popstate', handlePopstate);
-        };
-    }, []);
-
     const updatePasswords = (inputValue) => {
         setIsError(false);
 
