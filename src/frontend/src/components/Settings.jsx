@@ -4,11 +4,10 @@ import { isInputValid } from '../utils/Validation.jsx';
 import PropTypes from 'prop-types';
 
 Settings.propTypes = {
-    settings: PropTypes.object.isRequired,
     setSettings: PropTypes.func.isRequired
 };
 
-function Settings({ settings, setSettings }) {
+function Settings({ setSettings }) {
     const [minPasswordLength, setMinPasswordLength] = useState(getSettingFromUrl('minPasswordLength',15));
     const [maxPasswordLength, setMaxPasswordLength] = useState(getSettingFromUrl('maxPasswordLength',1000));
     const [minPasswordLengthLimit,setMinPasswordLengthLimit] = useState();
