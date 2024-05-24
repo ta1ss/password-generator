@@ -99,6 +99,10 @@ function App() {
                     <a id="jsonLink" href={jsonLink} className="custom-link">
                         JSON
                     </a>
+                    <span className="vertical-line"></span>
+                    <a id="apiLink" href="/swagger/index.html" className="custom-link">
+                        API
+                    </a>
                 </div>
             </div>
 

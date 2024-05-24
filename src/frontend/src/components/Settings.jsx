@@ -16,9 +16,9 @@ function Settings({ settings, setSettings }) {
 
     // Set the limit of password length on initial load
     useEffect(() => {
-        fetch('/api/v1/config/minPasswordLength')
+        fetch('/api/v1/config/')
             .then(response => response.json())
-            .then(data => setMinPasswordLengthLimit(data.minPasswordLength))
+            .then(data => setMinPasswordLengthLimit(data.MIN_PASSWORD_LENGTH))
             .catch(error => {
                 console.error("Error fetching data:", error);
                 setMinPasswordLengthLimit(15); // Set to default value
@@ -27,9 +27,9 @@ function Settings({ settings, setSettings }) {
         } ,[minPasswordLengthLimit]);
 
     useEffect(() => {
-            fetch('/api/v1/config/maxPasswordLength')
+            fetch('/api/v1/config/')
             .then(response => response.json())
-            .then(data => setMaxPasswordLengthLimit(data.maxPasswordLength))
+            .then(data => setMaxPasswordLengthLimit(data.MAX_PASSWORD_LENGTH))
             .catch(error => {
                 console.error("Error fetching data:", error);
                 setMaxPasswordLengthLimit(1000); // Set to default value
