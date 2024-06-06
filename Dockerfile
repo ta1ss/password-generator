@@ -1,20 +1,29 @@
 # Backend Build stage
 ARG builderimage=golang:1.21.1-bullseye
 ARG frontendbuildimage=node:22.1.0
+# ARG swaggerimage=ghcr.io/swaggo/swag:latest
+ARG swaggerimage=ghcr.io/tnaroska/swag:vx.x.x-test
+
+FROM ${swaggerimage} as swagger
+WORKDIR /app
+COPY src/backend /app
+RUN ["swag", "init"]
 
 FROM ${builderimage} as backend
 WORKDIR /app
 COPY src/backend .
+COPY --from=swagger /app/docs /app/docs
 ENV GIN_MODE=release
 RUN CGO_ENABLED=0 go build -p 4 -ldflags="-s -w" -o password-generator .
 
 FROM ghcr.io/mindthecap/upx-container as compressor
 COPY --from=backend /app/password-generator /app/password-generator
-CMD ["upx", "--best", "-qq", "/app/password-generator"]
+RUN ["upx", "--best", "-qq", "/app/password-generator"]
 
 FROM ${builderimage} as gotest
 WORKDIR /app
 COPY src/backend .
+COPY --from=swagger /app/docs /app/docs
 RUN go test ./...
 
 # Frontend npm install
@@ -41,7 +50,7 @@ WORKDIR /app
 COPY --from=compressor /app/password-generator .
 COPY --from=frontend /app/dist /app
 COPY --from=frontend /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY /src/backend/wordlists /app/wordlists
-COPY /src/backend/values /app/values
+COPY --from=backend /app/wordlists /app/wordlists
+COPY --from=backend /app/values /app/values
 EXPOSE 8080
 CMD ["./password-generator"]

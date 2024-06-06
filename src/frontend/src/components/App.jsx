@@ -1,64 +1,48 @@
 import '../styles/App.css';
+import { getSettingFromUrl, setSettingInUrl } from '../utils/Urlparse.jsx';
 import PasswordTable from './PasswordTable.jsx';
+import Settings from './Settings.jsx';
 import { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-
-function getNumFromURL() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const numParam = urlParams.get('num');
-    return numParam || "1";
-}
+import { NavLink } from 'react-router-dom';
+import { Collapse, Button } from 'reactstrap';
 
 function App() {
     const [passwords, setPasswords] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [num, setNum] = useState(getNumFromURL());
+    const [isError, setIsError] = useState(false);
+    const [num, setNum] = useState(getSettingFromUrl('num', 1));
     const [isInputValid, setIsInputValid] = useState(true);
+    const [settings, setSettings] = useState({});
 
     const [jsonLink, setJsonLink] = useState(`${window.location.origin}/json`);
 
-    
-    const location = useLocation();
 
-    useEffect(() => {
-        const handlePopstate = () => {
-            const updatedNum = getNumFromURL();
-            if (updatedNum) {
-                setNum(updatedNum);
-            }
-        };
+    const [isOpen, setIsOpen] = useState(false);
 
-        window.addEventListener('popstate', handlePopstate);
+    const toggle = () => setIsOpen(!isOpen);
 
-        return () => {
-            window.removeEventListener('popstate', handlePopstate);
-        };
-    }, []);
+    const updatePasswords = (inputValue) => {
+        setIsError(false);
 
-    useEffect(() => {
-        const getNumFromURL = () => {
-            const urlParams = new URLSearchParams(location.search);
-            const numParam = urlParams.get('num');
-            return numParam;
-        };
-
-        const initialNum = getNumFromURL();
-        
-        if (initialNum) {
-            setNum(initialNum);
-        }
-    }, [location]);
-
-    useEffect(() => {
-        if (num && num.match(/^[0-9]*$/) && num >= 1 && num <= 1000) {
+        if (String(inputValue).match(/^[0-9]*$/) && inputValue >= 1 && inputValue <= 1000) {
             setIsLoading(true);
             setIsInputValid(true);
 
-            const newURL = `${window.location.origin}?num=${num}`;
-            window.history.replaceState({}, '', newURL);
+            // Create a URLSearchParams object from the current inputs
+            const urlParams = new URLSearchParams(window.location.search);
+            // Create the fetch URL
+            const fetchUrl = `/api/v1/passwords?${urlParams.toString()}`;
 
-            fetch(`/json?num=${num}`)
-                .then((response) => response.json())
+            // TODO: Check for value errors
+            
+            setJsonLink(`${window.location.origin}${fetchUrl}`);
+            fetch(fetchUrl)
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error(`Error fetching password list! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then((data) => {
                     setPasswords(data);
                     setIsLoading(false);
@@ -66,36 +50,25 @@ function App() {
                 .catch((error) => {
                     console.error("Error fetching data:", error);
                     setIsLoading(false);
+                    setIsError(true);
                 });
         } else {
             setPasswords([]);
             setIsInputValid(false);
+            setIsLoading(true);
         }
-    }, [num]);
+    };
+
+    useEffect(() => {
+        // This code will run whenever the settings change
+
+        setSettingInUrl('num', num);
+        updatePasswords(num);
+    }, [settings,num]); // Pass the settings as a dependency to useEffect
 
     const handleNumInputChange = (event) => {
         const inputValue = event.target.value;
         setNum(inputValue);
-
-        if (inputValue.match(/^[0-9]*$/) && inputValue >= 1 && inputValue <= 1000) {
-            setIsLoading(true);
-            setIsInputValid(true);
-
-            setJsonLink(`${window.location.origin}/json?num=${inputValue}`);
-            fetch(`/json?num=${inputValue}`)
-                .then((response) => response.json())
-                .then((data) => {
-                    setPasswords(data);
-                    setIsLoading(false);
-                })
-                .catch((error) => {
-                    console.error("Error fetching data:", error);
-                    setIsLoading(false);
-                });
-        } else {
-            setPasswords([]);
-            setIsInputValid(false);
-        }
     };
 
     const handleFormSubmit = (event) => {
@@ -113,6 +86,10 @@ function App() {
                     <span className="vertical-line"></span>
                     <a id="jsonLink" href={jsonLink} className="custom-link">
                         JSON
+                    </a>
+                    <span className="vertical-line"></span>
+                    <a id="apiLink" href="/swagger/index.html" className="custom-link">
+                        API
                     </a>
                 </div>
             </div>
@@ -138,10 +115,14 @@ function App() {
                     </div>
                 </div>
             </form>
-
-
+            <div className="mt-3">
+                <Button color="primary" onClick={toggle} style={{ marginBottom: '1rem' }}>Toggle Settings</Button>
+                <Collapse isOpen={isOpen}>
+                    <Settings settings={settings} setSettings={setSettings}/>
+                </Collapse>
+            </div>
             <div className="mt-3 ">
-                {isLoading ? <p>Loading...</p> : <PasswordTable passwords={passwords} />}
+                {isError ? <p>Error occurred...</p> : isLoading ? <p>Loading...</p> : <PasswordTable passwords={passwords} />}
             </div>
         </div>
     );

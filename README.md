@@ -36,6 +36,14 @@ $ docker build -t password-generator .
 $ docker run -p 8080:8080 password-generator
 ```
 
+### Environment variables
+
+Environment variables override values given in the `values.yaml`. In addition there are special environment variables:
+
+| Environment Variable | Description | Default Value | Possible Values |
+| --- | --- | --- | --- |
+| `LOGGING_TYPE` | Logging format type | "json" | "json", "logfmt" |
+| `GIN_MODE` | Runtime mode for gin  | "release" | "release", "debug") |
 
 ## Testing
 

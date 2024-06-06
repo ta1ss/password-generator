@@ -4,13 +4,15 @@ import (
 	cryptorand "crypto/rand"
 	"errors"
 	"io"
-	"log"
 	"math/big"
 	"math/rand"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 type PasswordGenerator struct {
@@ -42,14 +44,21 @@ var (
 // NewPasswordGenerator creates a new PasswordGenerator instance.
 func NewPasswordGenerator(values Values) (*PasswordGenerator, error) {
 	var err error
+    var rawWordList []string
+
 	once.Do(func() {
 		if strings.HasPrefix(values.WORDLIST_PATH, "http://") || strings.HasPrefix(values.WORDLIST_PATH, "https://") {
-			wordList, err = loadWordsFromURL(values.WORDLIST_PATH)
-		} else {
-			wordList, err = loadWordsFromFile(values.WORDLIST_PATH)
-		}
+			rawWordList, err = loadWordsFromURL(values.WORDLIST_PATH)
+			} else {
+				rawWordList, err = loadWordsFromFile(values.WORDLIST_PATH)
+			}
 		if err != nil {
-			log.Fatalf("Error loading wordlist: %v", err)
+			log.Fatal().Err(err).Msg("Error loading wordlist")
+		}
+		// Format wordList by removing \r from each word
+		wordList = make([]string, len(rawWordList))
+		for i, word := range rawWordList {
+			wordList[i] = strings.ReplaceAll(word, "\r", "")
 		}
 	})
 	generator := &PasswordGenerator{
@@ -63,21 +72,23 @@ func NewPasswordGenerator(values Values) (*PasswordGenerator, error) {
 func loadWordsFromURL(url string) ([]string, error) {
 	resp, err := http.Get(url)
 	if err != nil {
-		log.Fatalf("Error fetching wordlist from URL: %v", err)
+		log.Fatal().Err(err).Msgf("Error fetching wordlist from URL: %s", url)
+		return nil, err
 	}
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalf("Error reading wordlist from URL: %v", err)
+		log.Fatal().Err(err).Msgf("Error reading wordlist from URL: %s", url)
+		return nil, err
 	}
-	log.Default().Printf("Loaded %d words from URL\n", len(strings.Split(string(data), "\n")))
+	log.Info().Msgf("Loaded %d words from URL", len(strings.Split(string(data), "\n")))
 	return strings.Split(string(data), "\n"), nil
 }
 
 func loadWordsFromFile(filename string) ([]string, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		log.Printf("File %s not found.\n", filename)
+		log.Fatal().Err(err).Msgf("Error reading wordlist from file: %s", filename)
 		return nil, err
 	}
 	return strings.Split(string(data), "\n"), nil
@@ -98,11 +109,11 @@ func getSymbol(symbols string) (string, error) {
 	return symbol, nil
 }
 
-func (pg *PasswordGenerator) generator() (string, string) {
+func (pg *PasswordGenerator) generator(minPasswordLength int, maxPasswordLength int) (string, string) {
 	var symbol string
 	passwordWords := make([]string, 3)
 	totalLength := 0
-	for totalLength < pg.values.MIN_PASSWORD_LENGTH || totalLength > pg.values.MAX_PASSWORD_LENGTH-2 {
+	for totalLength < minPasswordLength || totalLength > maxPasswordLength-2 {
 		totalLength = 0
 		for i := 0; i < 3; i++ {
 			randomIndex, _ := cryptorand.Int(cryptorand.Reader, big.NewInt(int64((len(pg.wordlist)))))
@@ -136,7 +147,7 @@ func (pg *PasswordGenerator) addRandomSymbols(pwd []rune, modifiedIndexes []int)
 		if !contains(modifiedIndexes, index) {
 			symbol, err := getSymbol(pg.values.INSIDE_SYMBOLS)
 			if err != nil {
-				log.Fatalf("INSIDE_SYMBOLS is empty")
+				log.Fatal().Err(err).Msg("Error getting INSIDE_SYMBOLS")
 			}
 			pwd[index] = []rune(string(symbol))[0]
 			modifiedIndexes = append(modifiedIndexes, index)
@@ -198,12 +209,19 @@ func contains(slice []int, val int) bool {
 	return false
 }
 
-func (pg *PasswordGenerator) GeneratePasswords(numPasswords int) ([]Password, error) {
+func (pg *PasswordGenerator) GeneratePasswords(numPasswords int, minPasswordLength int, maxPasswordLength int, timeout ...time.Duration) ([]Password, error) {
 	var wg sync.WaitGroup
 	passwords := make([]Password, numPasswords)
 	resultChan := make(chan Password, numPasswords)
+	doneChan := make(chan bool)
 
 	numGoroutines := (numPasswords + pg.values.PASSWORD_PER_ROUTINE - 1) / pg.values.PASSWORD_PER_ROUTINE
+
+	// Set default timeout to 5 seconds if no timeout is provided
+	timeoutDuration := 5 * time.Second
+	if len(timeout) > 0 {
+		timeoutDuration = timeout[0]
+	}
 
 	for g := 0; g < numGoroutines; g++ {
 		wg.Add(1)
@@ -217,7 +235,7 @@ func (pg *PasswordGenerator) GeneratePasswords(numPasswords int) ([]Password, er
 			defer wg.Done()
 
 			for i := 0; i < numToGenerate; i++ {
-				original, modified := pg.generator()
+				original, modified := pg.generator(minPasswordLength, maxPasswordLength)
 				modifiedRune := []rune(modified)
 				xkcd := pg.applyModifications(modifiedRune, modifiedIndexes)
 				xkcd = pg.mapSymbols(xkcd)
@@ -230,8 +248,15 @@ func (pg *PasswordGenerator) GeneratePasswords(numPasswords int) ([]Password, er
 	go func() {
 		wg.Wait()
 		close(resultChan)
+		close(doneChan)
 	}()
 
+	select {
+	case <-doneChan:
+		break
+	case <-time.After(timeoutDuration):
+		return nil, errors.New("Timeout")
+	}
 	i := 0
 	for result := range resultChan {
 		passwords[i] = result

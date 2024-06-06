@@ -51,7 +51,7 @@ func setupRouter() *gin.Engine {
 
 	r.Static("/assets", "./assets")
 
-	r.GET("/json", jsonHandler)
+	r.GET("/json", passwordsEndpoint)
 
 	return r
 }
