@@ -4,7 +4,7 @@ go 1.21.0
 
 require (
 	github.com/gin-contrib/cors v1.7.3
-	github.com/gin-gonic/gin v1.10.0
+	github.com/gin-gonic/gin v1.10.1
 	github.com/json-iterator/go v1.1.12
 	github.com/prometheus/client_golang v1.20.5
 	gopkg.in/yaml.v3 v3.0.1
